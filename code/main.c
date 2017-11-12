@@ -3,35 +3,27 @@
  *
  */
 
+#include <float.h>
 #include <math.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdbool.h>
 
 #include "vector3.h"
 #include "ray.h"
-
-
-bool
-HitSphere(V3 *center, float radius, Ray *r)
-{
-	V3 oc = SubtractVectorsV3(&r->Origin, center);
-	float a = DotProductV3(&r->Direction, &r->Direction);
-	float b = 2.0f * DotProductV3(&oc, &r->Direction);
-	float c = DotProductV3(&oc, &oc) - radius * radius;
-	float discriminant = b * b - 4 * a * c;
-	bool Result = (discriminant > 0) ? true : false;
-	return Result;
-}
+#include "geometry.h"
 
 V3
-Color(Ray *r)
+ColorSphere(Ray *r, Sphere **sList, int size)
 {
+	HitRecord hitRecord;
 	V3 Result;
-	V3 circleCenter = Vector3(0.0f, 0.0f, -1.0f);
-	if (HitSphere(&circleCenter, 0.5, r))
+	if (HitSphereList(sList, r, 0.0f, FLT_MAX, &hitRecord, size))
 	{
-		Result = Vector3(1.0f, 0.0f, 0.0f);
+		Result = Vector3(hitRecord.Normal.X + 1.0f,
+				 hitRecord.Normal.Y + 1.0f,
+				 hitRecord.Normal.Z + 1.0f);
+		Result = MultiplyScalarV3(&Result, 0.5f);
 	}
 	else
 	{
@@ -59,6 +51,14 @@ main()
 	V3 vertical	   = Vector3(0.0f, 2.0f, 0.0f);
 	V3 origin	   = Vector3(0.0f, 0.0f, 0.0f);
 
+	Sphere *sphereList[2];;
+	V3 tempCenter = Vector3(0.0f, 0.0f, -1.0f);
+	sphereList[0] = (Sphere *)malloc(sizeof(Sphere));
+	*sphereList[0] = CreateSphere(tempCenter, 0.5f);
+	tempCenter = Vector3(0.0f, -100.5f, -1.0f);
+	sphereList[1] = (Sphere *)malloc(sizeof(Sphere));
+	*sphereList[1] = CreateSphere(tempCenter, 100.0f);
+
 	int j;
 	int i;
 	for(j = ny - 1; j >= 0; j--)
@@ -72,13 +72,15 @@ main()
 			V3 direction = AddVectorsV3(&lowerLeftCorner, &v1);;
 			direction = AddVectorsV3(&direction, &v2);
 			Ray r = CreateRay(origin, direction);
-			V3 color = Color(&r);
+			V3 position = PointAtScalar(&r, 2.0f);
+			V3 color = ColorSphere(&r, sphereList, 2);
 			int ir = (int)(255.99 * color.R);
 			int ig = (int)(255.99 * color.G);
 			int ib = (int)(255.99 * color.B);
 			printf("%d %d %d\n", ir, ig, ib);
 		}
 	}
-
+	free(sphereList[0]);
+	free(sphereList[1]);
 	return 0;
 }
