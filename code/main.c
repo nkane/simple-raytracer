@@ -8,10 +8,14 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 
 #include "vector3.h"
 #include "ray.h"
+#include "camera.h"
 #include "geometry.h"
+
+#define drand48()((double)rand() / RAND_MAX)
 
 V3
 ColorSphere(Ray *r, Sphere **sList, int size)
@@ -43,7 +47,7 @@ main()
 {
 	int nx = 200;
 	int ny = 100;
-
+	int ns = 100;
 	printf("P3\n%d %d\n255\n", nx, ny);
 
 	V3 lowerLeftCorner = Vector3(-2.0f, -1.0f, -1.0f);
@@ -51,6 +55,7 @@ main()
 	V3 vertical	   = Vector3(0.0f, 2.0f, 0.0f);
 	V3 origin	   = Vector3(0.0f, 0.0f, 0.0f);
 
+	Camera camera = CreateCamera(origin, lowerLeftCorner, horizontal, vertical);
 	Sphere *sphereList[2];;
 	V3 tempCenter = Vector3(0.0f, 0.0f, -1.0f);
 	sphereList[0] = (Sphere *)malloc(sizeof(Sphere));
@@ -59,21 +64,28 @@ main()
 	sphereList[1] = (Sphere *)malloc(sizeof(Sphere));
 	*sphereList[1] = CreateSphere(tempCenter, 100.0f);
 
+	srand(time(NULL));
+
 	int j;
 	int i;
+	int s;
+	V3 color;
 	for(j = ny - 1; j >= 0; j--)
 	{
 		for (i = 0; i < nx; i++)
 		{
-			float u = (float)i / (float)nx;
-			float v = (float)j / (float)ny;
-			V3 v1 = MultiplyScalarV3(&horizontal, u);
-			V3 v2 = MultiplyScalarV3(&vertical, v);
-			V3 direction = AddVectorsV3(&lowerLeftCorner, &v1);;
-			direction = AddVectorsV3(&direction, &v2);
-			Ray r = CreateRay(origin, direction);
-			V3 position = PointAtScalar(&r, 2.0f);
-			V3 color = ColorSphere(&r, sphereList, 2);
+			color = Vector3(0.0f, 0.0f, 0.0f);
+			for (s = 0; s < ns; s++)
+			{
+				float u = ((float)i + drand48()) / (float)nx;
+				float v = ((float)j + drand48()) / (float)ny;
+				Ray r = GetRayCamera(&camera, u, v);
+				// NOTE(nick): not used?
+				V3 p = PointAtScalar(&r, 2.0f);
+				V3 blendColor = ColorSphere(&r, sphereList, 2);
+				color = AddVectorsV3(&color, &blendColor);
+			}
+			color = DivideScalarV3(&color, (float)ns);
 			int ir = (int)(255.99 * color.R);
 			int ig = (int)(255.99 * color.G);
 			int ib = (int)(255.99 * color.B);
